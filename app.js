@@ -25,7 +25,7 @@ class App {
       0.1,
       100
     );
-    this.camera.position.set(0, 4, 14);
+    this.camera.position.set(0, 10, 50);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xaaaaaa);
@@ -80,7 +80,46 @@ class App {
   }
 
   loadGLTF() {
+    const loader = new GLTFLoader().setPath("./assets/");
     const self = this;
+
+    // Load a glTF resource
+    loader.load(
+      // resource URL
+      "WindMill.gltf",
+      // called when the resource is loaded
+      function (gltf) {
+        const bbox = new THREE.Box3().setFromObject(gltf.scene);
+        console.log(
+          `min:${bbox.min.x.toFixed(2)},${bbox.min.y.toFixed(
+            2
+          )},${bbox.min.z.toFixed(2)} -  max:${bbox.max.x.toFixed(
+            2
+          )},${bbox.max.y.toFixed(2)},${bbox.max.z.toFixed(2)}`
+        );
+
+        gltf.scene.traverse((child) => {
+          if (child.isMesh) {
+            child.material.metalness = 0.2;
+          }
+        });
+        self.chair = gltf.scene;
+
+        self.scene.add(gltf.scene);
+
+        self.loadingBar.visible = false;
+
+        self.renderer.setAnimationLoop(self.render.bind(self));
+      },
+      // called while loading is progressing
+      function (xhr) {
+        self.loadingBar.progress = xhr.loaded / xhr.total;
+      },
+      // called when loading has errors
+      function (error) {
+        console.log("An error happened");
+      }
+    );
   }
 
   loadFBX() {}
