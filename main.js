@@ -3,10 +3,10 @@
 // import { MindARThree } from "mindar-image-three";
 // console.log("MindARThree", MindARThree);
 
-import * as THREE from "https://github.com/Aneteron/webAR/libs/three/three.module.js";
-import { OrbitControls } from "https://github.com/Aneteron/webAR/libs/three/jsm/OrbitControls.js";
-import { Stats } from "https://github.com/Aneteron/webAR/tree/main/libs/stats.module.js";
-import { ARButton } from "https://github.com/Aneteron/webAR/tree/main/libs/ARButton.js";
+import * as THREE from "https://github.com/Aneteron/webAR/blob/main/libs/three/three.module.js";
+import { OrbitControls } from "https://github.com/Aneteron/webAR/blob/main/libs/three/jsm/OrbitControls.js";
+import { Stats } from "https://github.com/Aneteron/webAR/blob/main/libs/stats.module.js";
+import { ARButton } from "https://github.com/Aneteron/webAR/blob/main/libs/ARButton.js";
 
 class App {
   constructor() {
