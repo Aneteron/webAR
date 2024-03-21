@@ -1,8 +1,16 @@
 console.log("My app .js");
 import * as THREE from "./libs/three/three.module.js";
 console.log("THREE", THREE);
+import { GLTFLoader } from "./libs/three/jsm/GLTFLoader.js";
+console.log("GLTFLoader", GLTFLoader);
+import { FBXLoader } from "./libs/three/jsm/FBXLoader.js";
+console.log("FBXLoader", FBXLoader);
+import { RGBELoader } from "./libs/three/jsm/RGBELoader.js";
+console.log("RGBELoader", RGBELoader);
 import { OrbitControls } from "./libs/three/jsm/OrbitControls.js";
 console.log("Orbit controll", OrbitControls);
+import { LoadingBar } from "./libs/LoadingBar.js";
+console.log("LoadingBar", LoadingBar);
 
 class App {
   constructor() {
