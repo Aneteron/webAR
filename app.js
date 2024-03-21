@@ -18,47 +18,72 @@ class App {
     document.body.appendChild(container);
 
     //Camera
+
     this.camera = new THREE.PerspectiveCamera(
       60,
       window.innerWidth / window.innerHeight,
       0.1,
       100
     );
-    this.camera.position.set(0, 0, 4);
+    this.camera.position.set(0, 4, 14);
 
-    // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0xaaaaaa);
 
-    // // Light
-    const ambient = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 0.3);
+    const ambient = new THREE.HemisphereLight(0xffffff, 0x666666, 0.3);
     this.scene.add(ambient);
 
     const light = new THREE.DirectionalLight();
-    light.position.set(0.2, 1, 1);
+    light.position.set(0.2, 1, 1.5);
     this.scene.add(light);
 
-    // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.physicallyCorrectLights = true;
+    this.setEnvironment();
     container.appendChild(this.renderer.domElement);
 
-    //Geometry
+    //Add code here
 
-    const geometry = new THREE.TetrahedronBufferGeometry();
-    const material = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+    this.loadingBar = new LoadingBar();
+    this.loadGLTF();
 
-    this.mesh = new THREE.Mesh(geometry, material);
-
-    this.scene.add(this.mesh);
-
-    const controls = new OrbitControls(this.camera, this.renderer.domElement);
-
-    this.renderer.setAnimationLoop(this.render.bind(this));
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.target.set(0, 3.5, 0);
+    this.controls.update();
 
     window.addEventListener("resize", this.resize.bind(this));
   }
+
+  setEnvironment() {
+    const loader = new RGBELoader().setDataType(THREE.UnsignedByteType);
+    const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+    pmremGenerator.compileEquirectangularShader();
+
+    const self = this;
+
+    loader.load(
+      "./assets/hdr/venice_sunset_1k.hdr",
+      (texture) => {
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+        pmremGenerator.dispose();
+
+        self.scene.environment = envMap;
+      },
+      undefined,
+      (err) => {
+        console.error("An error occurred setting the environment");
+      }
+    );
+  }
+
+  loadGLTF() {
+    const self = this;
+  }
+
+  loadFBX() {}
 
   resize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -67,7 +92,7 @@ class App {
   }
 
   render() {
-    this.mesh.rotateY(0.01);
+    this.chair.rotateY(0.01);
     this.renderer.render(this.scene, this.camera);
   }
 }
