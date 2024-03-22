@@ -138,6 +138,14 @@ class App {
 
   initScene() {
     this.loadKnight();
+
+    this.reticle = new THREE.Mesh(
+      new THREE.RingBufferGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial()
+    );
+    this.reticle.matrixAutoUpdate = false;
+    this.reticle.visible = false;
+    this.scene.add(this.reticle);
   }
 
   setupXR() {
@@ -164,9 +172,42 @@ class App {
     this.scene.add(this.controller);
   }
 
-  requestHitTestSource() {}
+  requestHitTestSource() {
+    const self = this;
 
-  getHitTestResults(frame) {}
+    const session = this.renderer.xr.getSession();
+
+    session.requestReferenceSpace("viewer").then(function (referenceSpace) {
+      session
+        .requestHitTestSource({ space: referenceSpace })
+        .then(function (source) {
+          self.hitTestSource = source;
+        });
+    });
+
+    session.addEventListener("end", function () {
+      self.hitTestSourceRequested = false;
+      self.hitTestSource = null;
+      self.referenceSpace = null;
+    });
+
+    this.hitTestSourceRequested = true;
+  }
+
+  getHitTestResults(frame) {
+    const hitTestResults = frame.getHitTestResults(this.hitTestSource);
+
+    if (hitTestResults.length) {
+      const referenceSpace = this.renderer.xr.getReferenceSpace();
+      const hit = hitTestResults[0];
+      const pose = hit.getPose(referenceSpace);
+
+      this.reticle.visible = true;
+      this.reticle.matrix.fromArray(pose.transform.matrix);
+    } else {
+      this.reticle.visible = false;
+    }
+  }
 
   render(timestamp, frame) {
     const dt = this.clock.getDelta();
