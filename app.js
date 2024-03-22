@@ -17,6 +17,7 @@ import { ARButton } from "./libs/ARButton.js";
 //console.log("ARButton", ARButton);
 import { Player } from "./libs/Player.js";
 console.log("Player", Player);
+console.log("test");
 
 class App {
   constructor() {
