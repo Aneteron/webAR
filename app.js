@@ -12,9 +12,11 @@ import { OrbitControls } from "./libs/three/jsm/OrbitControls.js";
 import { LoadingBar } from "./libs/LoadingBar.js";
 // console.log("LoadingBar", LoadingBar);
 import { Stats } from "./libs/stats.module.js";
-console.log("Stats", Stats);
+//console.log("Stats", Stats);
 import { ARButton } from "./libs/ARButton.js";
-console.log("ARButton", ARButton);
+//console.log("ARButton", ARButton);
+import { Player } from "./libs/Player.js";
+console.log("Player", Player);
 
 class App {
   constructor() {
@@ -23,34 +25,36 @@ class App {
 
     this.clock = new THREE.Clock();
 
+    this.loadingBar = new LoadingBar();
+
+    this.assetsPath = "./assets/";
+
     this.camera = new THREE.PerspectiveCamera(
       70,
       window.innerWidth / window.innerHeight,
       0.01,
       20
     );
+    this.camera.position.set(0, 1.6, 3);
 
     this.scene = new THREE.Scene();
 
-    this.scene.add(new THREE.HemisphereLight(0x606060, 0x404040));
+    const ambient = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 2);
+    ambient.position.set(0.5, 1, 0.25);
+    this.scene.add(ambient);
 
-    const light = new THREE.DirectionalLight(0xffffff);
-    light.position.set(1, 1, 1).normalize();
+    const light = new THREE.DirectionalLight();
+    light.position.set(0.2, 1, 1);
     this.scene.add(light);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.outputEncoding = THREE.sRGBEncoding;
-
     container.appendChild(this.renderer.domElement);
+    this.setEnvironment();
 
-    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 3.5, 0);
-    this.controls.update();
-
-    this.stats = new Stats();
-    document.body.appendChild(this.stats.dom);
+    this.workingVec3 = new THREE.Vector3();
 
     this.initScene();
     this.setupXR();
@@ -58,34 +62,26 @@ class App {
     window.addEventListener("resize", this.resize.bind(this));
   }
 
-  initScene() {
-    this.geometry = new THREE.BoxBufferGeometry(0.06, 0.06, 0.06);
-    this.meshes = [];
-  }
-
-  setupXR() {
-    this.renderer.xr.enabled = true;
+  setEnvironment() {
+    const loader = new RGBELoader().setDataType(THREE.UnsignedByteType);
+    const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+    pmremGenerator.compileEquirectangularShader();
 
     const self = this;
-    let controller;
 
-    function onSelect() {
-      const material = new THREE.MeshPhongMaterial({
-        color: 0xffffff * Math.random(),
-      });
-      const mesh = new THREE.Mesh(self.geometry, material);
-      mesh.position.set(0, 0, -0.3).applyMatrix4(controller.matrixWorld);
-      mesh.quaternion.setFromRotationMatrix(controller.matrixWorld);
-      self.scene.add(mesh);
-      self.scene.push(mesh);
-    }
-    const btn = new ARButton(this.renderer);
+    loader.load(
+      "./assets/hdr/venice_sunset_1k.hdr",
+      (texture) => {
+        const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+        pmremGenerator.dispose();
 
-    controller = this.renderer.xr.getController(0);
-    controller.addEventListener("select", onSelect);
-    this.scene.add(controller);
-
-    this.renderer.setAnimationLoop(this.render.bind(this));
+        self.scene.environment = envMap;
+      },
+      undefined,
+      (err) => {
+        console.error("An error occurred setting the environment");
+      }
+    );
   }
 
   resize() {
@@ -94,11 +90,95 @@ class App {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  render() {
-    this.stats.update();
-    this.meshes.forEach((mesh) => {
-      mesh.rotateY(0.01);
+  loadKnight() {
+    const loader = new GLTFLoader().setPath(this.assetsPath);
+    const self = this;
+
+    // Load a GLTF resource
+    loader.load(
+      // resource URL
+      `knight2.glb`,
+      // called when the resource is loaded
+      function (gltf) {
+        const object = gltf.scene.children[5];
+
+        const options = {
+          object: object,
+          speed: 0.5,
+          assetsPath: self.assetsPath,
+          loader: loader,
+          animations: gltf.animations,
+          clip: gltf.animations[0],
+          app: self,
+          name: "knight",
+          npc: false,
+        };
+
+        self.knight = new Player(options);
+        self.knight.object.visible = false;
+
+        self.knight.action = "Dance";
+        const scale = 0.005;
+        self.knight.object.scale.set(scale, scale, scale);
+
+        self.loadingBar.visible = false;
+        self.renderer.setAnimationLoop(self.render.bind(self));
+      },
+      // called while loading is progressing
+      function (xhr) {
+        self.loadingBar.progress = xhr.loaded / xhr.total;
+      },
+      // called when loading has errors
+      function (error) {
+        console.log("An error happened");
+      }
+    );
+  }
+
+  initScene() {
+    this.loadKnight();
+  }
+
+  setupXR() {
+    this.renderer.xr.enabled = true;
+
+    const btn = new ARButton(this.renderer, {
+      sessionInit: {
+        requiredFeatures: ["hit-test"],
+        optionalFeatures: ["dom-overlay"],
+        domOverlay: { root: document.body },
+      },
     });
+
+    const self = this;
+
+    this.hitTestSourceRequested = false;
+    this.hitTestSource = null;
+
+    function onSelect() {}
+
+    this.controller = this.renderer.xr.getController(0);
+    this.controller.addEventListener("select", onSelect);
+
+    this.scene.add(this.controller);
+  }
+
+  requestHitTestSource() {}
+
+  getHitTestResults(frame) {}
+
+  render(timestamp, frame) {
+    const dt = this.clock.getDelta();
+    if (this.knight) this.knight.update(dt);
+
+    const self = this;
+
+    if (frame) {
+      if (this.hitTestSourceRequested === false) this.requestHitTestSource();
+
+      if (this.hitTestSource) this.getHitTestResults(frame);
+    }
+
     this.renderer.render(this.scene, this.camera);
   }
 }
