@@ -164,7 +164,22 @@ class App {
     this.hitTestSourceRequested = false;
     this.hitTestSource = null;
 
-    function onSelect() {}
+    function onSelect() {
+      console.log("self.knight", self.knight);
+      if (self.knight === undefined) return;
+
+      if (self.reticle.visible) {
+        if (self.knight.object.visible) {
+          self.workingVec3.setFromMatrixPosition(self.reticle.matrix);
+          self.knight.newPath(self.workingVec3);
+        } else {
+          self.knight.object.position.setFromMatrixPosition(
+            self.reticle.matrix
+          );
+          self.knight.object.visible = true;
+        }
+      }
+    }
 
     this.controller = this.renderer.xr.getController(0);
     this.controller.addEventListener("select", onSelect);
